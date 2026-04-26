@@ -1,10 +1,15 @@
+import mongoose from 'mongoose';
+
+mongoose.connect('mongodb+srv://admin:Santos123%21@cluster0.8yfaf0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+  .then(() => console.log('MongoDB conectado 🔥'))
+  .catch(err => console.error(err));
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
