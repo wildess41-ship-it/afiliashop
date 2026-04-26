@@ -3,11 +3,10 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 
-// ================== CONFIG ==================
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🔥 SUA CONEXÃO MONGODB (já corrigida)
+// ================== MONGODB ==================
 mongoose.connect('mongodb+srv://admin:Santos123%21@cluster0.o8yfaf0.mongodb.net/afiliashop?retryWrites=true&w=majority&appName=Cluster0')
   .then(() => console.log('🔥 MongoDB conectado'))
   .catch(err => console.error('❌ Erro MongoDB:', err));
@@ -39,72 +38,96 @@ const Category = mongoose.model('Category', CategorySchema);
 
 // ================== ROTAS ==================
 
-// 🔹 HEALTH CHECK
+// HEALTH
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// 🔹 LISTAR PRODUTOS
+// LISTAR PRODUTOS
 app.get('/api/products', async (req, res) => {
   try {
     const { category, origin } = req.query;
 
     let filter = { published: true };
 
-    if (category && category !== 'all') {
-      filter.categoryId = category;
-    }
-
-    if (origin && origin !== 'all') {
-      filter.origin = origin;
-    }
+    if (category && category !== 'all') filter.categoryId = category;
+    if (origin && origin !== 'all') filter.origin = origin;
 
     const products = await Product.find(filter).sort({ createdAt: -1 });
 
     res.json(products);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Erro ao buscar produtos' });
   }
 });
 
-// 🔹 LISTAR CATEGORIAS
+// LISTAR CATEGORIAS
 app.get('/api/categories', async (req, res) => {
   const categories = await Category.find();
   res.json(categories);
 });
 
-// 🔹 CRIAR CATEGORIA
+// CRIAR CATEGORIA
 app.post('/api/admin/categories', async (req, res) => {
   const { name, origin } = req.body;
 
-  const newCategory = await Category.create({ name, origin });
+  if (!name) {
+    return res.status(400).json({ error: 'Nome obrigatório' });
+  }
+
+  const newCategory = await Category.create({ name, origin: origin || 'Brasil' });
 
   res.json(newCategory);
 });
 
-// 🔹 CRIAR PRODUTO
+// 🔥 CRIAR OU EDITAR (ANTI-DUPLICAÇÃO)
 app.post('/api/admin/products', async (req, res) => {
   try {
-    const { title, description, image, link, categoryId, origin, published } = req.body;
+    const { _id, title, description, image, link, categoryId, origin, published } = req.body;
 
+    if (!title || !link) {
+      return res.status(400).json({ error: 'Título e link obrigatórios' });
+    }
+
+    // 👉 SE TEM ID = EDITA (evita duplicar)
+    if (_id) {
+      const updated = await Product.findByIdAndUpdate(
+        _id,
+        {
+          title,
+          description,
+          image,
+          link,
+          categoryId,
+          origin,
+          published
+        },
+        { new: true }
+      );
+
+      return res.json(updated);
+    }
+
+    // 👉 SENÃO = CRIA NOVO
     const newProduct = await Product.create({
       title,
       description,
       image,
       link,
-      categoryId,
-      origin,
-      published: published || false,
+      categoryId: categoryId || null,
+      origin: origin || 'Brasil',
+      published: published ?? true,
       createdAt: new Date().toISOString()
     });
 
     res.json(newProduct);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar produto' });
+
+  } catch {
+    res.status(500).json({ error: 'Erro ao salvar produto' });
   }
 });
 
-// 🔹 EDITAR PRODUTO
+// EDITAR VIA PUT (opcional, compatível)
 app.put('/api/admin/products/:id', async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(
@@ -114,41 +137,45 @@ app.put('/api/admin/products/:id', async (req, res) => {
     );
 
     res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar' });
+  } catch {
+    res.status(500).json({ error: 'Erro ao editar' });
   }
 });
 
-// 🔹 DELETAR PRODUTO
+// DELETAR PRODUTO
 app.delete('/api/admin/products/:id', async (req, res) => {
   try {
-    await Product.findByIdAndDelete(req.params.id);
+    const deleted = await Product.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Erro ao deletar' });
   }
 });
 
-// 🔹 IMPORTAR LINKS
+// IMPORTAR LINKS (MELHORADO)
 app.post('/api/admin/import-links', async (req, res) => {
   try {
     const { links } = req.body;
-
     const results = [];
 
     for (const link of links) {
       try {
         const url = new URL(link);
-        const title = url.hostname.split('.')[0].toUpperCase();
+        const title = url.hostname.replace('www.', '').split('.')[0].toUpperCase();
 
         const product = await Product.create({
           title,
-          description: `Produto de ${url.hostname}`,
+          description: `Confira este produto em ${url.hostname}`,
           image: `https://via.placeholder.com/300?text=${title}`,
           link,
           categoryId: null,
           origin: 'Brasil',
-          published: false,
+          published: true,
           createdAt: new Date().toISOString()
         });
 
@@ -162,11 +189,11 @@ app.post('/api/admin/import-links', async (req, res) => {
     res.json(results);
 
   } catch {
-    res.status(500).json({ error: 'Erro ao importar' });
+    res.status(500).json({ error: 'Erro ao importar links' });
   }
 });
 
-// ================== START ==================
+// START
 app.listen(PORT, () => {
   console.log(`🚀 Backend rodando na porta ${PORT}`);
 });
