@@ -1,0 +1,22 @@
+{
+  "name": "affiliate-shop",
+  "version": "1.0.0",
+  "description": "Plataforma de vitrine de produtos afiliados",
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development node backend/src/index.js",
+    "frontend:dev": "cd frontend && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run frontend:dev\"",
+    "build": "cd frontend && npm run build",
+    "start": "cross-env NODE_ENV=production node backend/src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "concurrently": "^8.2.0"
+  }
+}
