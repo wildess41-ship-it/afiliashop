@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-
-mongoose.connect('mongodb+srv://admin:Santos123%21@cluster0.8yfaf0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect('mongodb+srv://admin:Santos123%21@cluster0.o8yfaf0.mongodb.net/afiliashop?retryWrites=true&w=majority&appName=Cluster0')
   .then(() => console.log('MongoDB conectado 🔥'))
   .catch(err => console.error(err));
 
