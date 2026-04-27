@@ -18,19 +18,19 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ================== MODELS ==================
 const ProductSchema = new mongoose.Schema({
-  title: String,
+  title: { type: String, required: true },
   description: String,
   image: String,
-  link: String,
+  link: { type: String, required: true },
   categoryId: String,
-  origin: String,
-  published: Boolean,
-  createdAt: String
+  origin: { type: String, default: 'Brasil' },
+  published: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
 });
 
 const CategorySchema = new mongoose.Schema({
-  name: String,
-  origin: String
+  name: { type: String, required: true },
+  origin: { type: String, default: 'Brasil' }
 });
 
 const Product = mongoose.model('Product', ProductSchema);
@@ -56,7 +56,7 @@ app.get('/api/products', async (req, res) => {
     const products = await Product.find(filter).sort({ createdAt: -1 });
 
     res.json(products);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar produtos' });
   }
 });
@@ -75,7 +75,10 @@ app.post('/api/admin/categories', async (req, res) => {
     return res.status(400).json({ error: 'Nome obrigatório' });
   }
 
-  const newCategory = await Category.create({ name, origin: origin || 'Brasil' });
+  const newCategory = await Category.create({
+    name,
+    origin: origin || 'Brasil'
+  });
 
   res.json(newCategory);
 });
@@ -89,8 +92,14 @@ app.post('/api/admin/products', async (req, res) => {
       return res.status(400).json({ error: 'Título e link obrigatórios' });
     }
 
-    // 👉 SE TEM ID = EDITA (evita duplicar)
+    // 👉 EDITAR
     if (_id) {
+      const exists = await Product.findById(_id);
+
+      if (!exists) {
+        return res.status(404).json({ error: 'Produto não encontrado' });
+      }
+
       const updated = await Product.findByIdAndUpdate(
         _id,
         {
@@ -108,7 +117,7 @@ app.post('/api/admin/products', async (req, res) => {
       return res.json(updated);
     }
 
-    // 👉 SENÃO = CRIA NOVO
+    // 👉 CRIAR
     const newProduct = await Product.create({
       title,
       description,
@@ -116,18 +125,17 @@ app.post('/api/admin/products', async (req, res) => {
       link,
       categoryId: categoryId || null,
       origin: origin || 'Brasil',
-      published: published ?? true,
-      createdAt: new Date().toISOString()
+      published: published ?? true
     });
 
     res.json(newProduct);
 
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: 'Erro ao salvar produto' });
   }
 });
 
-// EDITAR VIA PUT (opcional, compatível)
+// EDITAR VIA PUT
 app.put('/api/admin/products/:id', async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(
@@ -142,22 +150,29 @@ app.put('/api/admin/products/:id', async (req, res) => {
   }
 });
 
-// DELETAR PRODUTO
+// 🔥 DELETE MELHORADO
 app.delete('/api/admin/products/:id', async (req, res) => {
   try {
-    const deleted = await Product.findByIdAndDelete(req.params.id);
+    const id = req.params.id;
+
+    if (!id) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const deleted = await Product.findByIdAndDelete(id);
 
     if (!deleted) {
       return res.status(404).json({ error: 'Produto não encontrado' });
     }
 
-    res.json({ success: true });
-  } catch {
+    res.json({ success: true, deleted });
+
+  } catch (err) {
     res.status(500).json({ error: 'Erro ao deletar' });
   }
 });
 
-// IMPORTAR LINKS (MELHORADO)
+// IMPORTAR LINKS
 app.post('/api/admin/import-links', async (req, res) => {
   try {
     const { links } = req.body;
@@ -175,8 +190,7 @@ app.post('/api/admin/import-links', async (req, res) => {
           link,
           categoryId: null,
           origin: 'Brasil',
-          published: true,
-          createdAt: new Date().toISOString()
+          published: true
         });
 
         results.push({ success: true, product });
