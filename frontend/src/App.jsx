@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 import Storefront from './pages/Storefront';
 import AdminPanel from './pages/AdminPanel';
 
@@ -9,9 +8,12 @@ export default function App() {
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [loginError, setLoginError] = useState('');
 
+  const ADMIN_PASSWORD = 'S@nt0s970321';
+
   const handleAdminLogin = (e) => {
     e.preventDefault();
-    if (adminPassword === 'S@nt0s970321') {
+
+    if (adminPassword === ADMIN_PASSWORD) {
       setIsAdmin(true);
       setAdminPassword('');
       setShowLoginForm(false);
@@ -27,8 +29,9 @@ export default function App() {
     setShowLoginForm(false);
   };
 
+  // 🔥 ADMIN LOGADO
   if (isAdmin) {
-    return <AdminPanel onLogout={handleAdminLogout} password={adminPassword} />;
+    return <AdminPanel onLogout={handleAdminLogout} />;
   }
 
   return (
@@ -36,26 +39,37 @@ export default function App() {
       <header>
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            
             <div>
               <h1>🛍️ AfiliaShop</h1>
-              <p style={{ color: '#666', fontSize: '14px' }}>Vitrine de Produtos Afiliados</p>
+              <p style={{ color: '#666', fontSize: '14px' }}>
+                Vitrine de Produtos Afiliados
+              </p>
             </div>
+
+            {/* 🔐 BOTÃO ADMIN ESCONDIDO */}
             <div className="nav">
-              {!showLoginForm && (
+              {window.location.hash === '#admin' && !showLoginForm && (
                 <button onClick={() => setShowLoginForm(true)}>
                   Painel Admin
                 </button>
               )}
             </div>
+
           </div>
         </div>
       </header>
 
+      {/* 🔐 FORM LOGIN */}
       {showLoginForm && (
         <div className="container">
           <div className="admin-panel" style={{ maxWidth: '400px' }}>
             <h2>Login Admin</h2>
-            {loginError && <div className="error">{loginError}</div>}
+
+            {loginError && (
+              <div className="error">{loginError}</div>
+            )}
+
             <form onSubmit={handleAdminLogin}>
               <div className="form-group">
                 <label>Senha:</label>
@@ -67,9 +81,11 @@ export default function App() {
                   autoFocus
                 />
               </div>
+
               <button type="submit" className="btn-primary">
                 Entrar
               </button>
+
               <button
                 type="button"
                 className="btn-primary"
@@ -87,6 +103,7 @@ export default function App() {
         </div>
       )}
 
+      {/* 🛍️ VITRINE */}
       {!showLoginForm && <Storefront />}
     </>
   );
